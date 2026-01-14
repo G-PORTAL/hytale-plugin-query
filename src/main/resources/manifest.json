@@ -1,0 +1,15 @@
+{
+  "Group": "GPORTAL",
+  "Name": "Query",
+  "Version": "1.0.0",
+  "Authors": [
+    {
+      "Name": "Alexander Birkner",
+      "Email": "alexander.birkner@g-portal.com",
+      "Url": "https://www.g-portal.com"
+    }
+  ],
+  "Website": "https://www.g-portal.com",
+  "Main": "com.gportal.hytale.plugins.query.QueryPlugin",
+  "ServerVersion": "*"
+}
