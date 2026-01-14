@@ -4,7 +4,7 @@ A Hytale mod that exposes the Steam Query (A2S) protocol, allowing your server t
 
 ### Installation
 
-1. Download the latest `.jar` from the [releases page](https://github.com/gportal/hytale-plugin-query/releases).
+1. Download the latest `.jar` from the [releases page](https://github.com/G-PORTAL/hytale-plugin-query/releases).
 2. Copy the `.jar` file to your Hytale server's `mods/` folder.
 3. Restart the server.
 
