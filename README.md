@@ -32,7 +32,7 @@ You can query the server using standard tools like `qstat`.
 
 #### Command
 ```bash
-qstat -a2s 127.0.0.1:29415 -json -R
+qstat -a2s 127.0.0.1:29415 -json -R -P
 ```
 
 #### Response
@@ -46,7 +46,7 @@ qstat -a2s 127.0.0.1:29415 -json -R
 		"name": "Hytale Server",
 		"gametype": "hytale",
 		"map": "world",
-		"numplayers": 0,
+		"numplayers": 1,
 		"maxplayers": 4,
 		"numspectators": 0,
 		"maxspectators": 0,
@@ -64,12 +64,20 @@ qstat -a2s 127.0.0.1:29415 -json -R
 			"game_port": "29400",
 			"hostport": "29400",
 			"protocol_version": "1",
+            "plugins_enabled": "82",
 			"tps_default": "30",
 			"auth_status": "authenticated",
 			"patchline": "release",
 			"revision": "50e69c385653343d6bf1ad0103333f96dd93f54b",
 			"protocol_hash": "6708f121966c1c443f4b0eb525b2f81d0a8dc61f5003a692a8fa157e5e02cea9"
-		}
-	}
+		},
+        "players": [
+            {
+                "name": "Tyrola",
+                "score": 0,
+                "time": "10m11s"
+            }
+        ]
+    }
 ]
 ```

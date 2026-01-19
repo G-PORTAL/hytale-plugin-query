@@ -9,13 +9,31 @@ import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.protocol.ProtocolSettings;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
+import com.hypixel.hytale.server.core.plugin.PluginBase;
+import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.io.PacketHandler;
+import io.netty.util.AttributeKey;
 
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.Objects;
 
 public class StatusWriter {
+    private static AttributeKey<Long> LOGIN_START_KEY;
+
+    static {
+        try {
+            Field field = PacketHandler.class.getDeclaredField("LOGIN_START_ATTRIBUTE_KEY");
+            field.setAccessible(true);
+            LOGIN_START_KEY = (AttributeKey<Long>) field.get(null);
+        } catch (Exception e) {
+            System.out.println("[QueryPlugin] Failed to access LOGIN_START_ATTRIBUTE_KEY: " + e.getMessage());
+        }
+    }
+
     private QueryServer server;
 
     public void start() {
@@ -82,7 +100,7 @@ public class StatusWriter {
         for (var entry : universe.getWorlds().entrySet()) {
             var world = entry.getValue();
             for (var ref : world.getPlayerRefs()) {
-                server.players.add(new PlayerInfo(id++, ref.getUsername(), (short) 0, 0.0f));
+                server.players.add(new PlayerInfo(id++, ref.getUsername(), (short) 0, getPlayerConnectionTime(ref)));
             }
         }
 
@@ -92,7 +110,27 @@ public class StatusWriter {
         server.rules.put("protocol_version", String.valueOf(ProtocolSettings.PROTOCOL_VERSION));
         server.rules.put("protocol_hash", ProtocolSettings.PROTOCOL_HASH);
         server.rules.put("auth_status",  getAuthStatus());
+        server.rules.put("max_view_radius",  String.valueOf(HytaleServer.get().getConfig().getMaxViewRadius()));
+
+        long enabledPlugins = PluginManager.get().getPlugins().stream().filter(PluginBase::isEnabled).count();
+        server.rules.put("plugins_enabled", String.valueOf(enabledPlugins));
+
         universe.getWorlds().forEach((name, world) -> server.rules.put("tps_" + name, String.valueOf(world.getTps())));
+    }
+
+    private float getPlayerConnectionTime(PlayerRef ref) {
+        if (LOGIN_START_KEY == null || ref == null) return 0.0f;
+
+        try {
+            var channel = ref.getPacketHandler().getChannel();
+            Long startNano = channel.attr(LOGIN_START_KEY).get();
+            if (startNano == null) return 0.0f;
+
+            long elapsedNano = System.nanoTime() - startNano;
+            return (float) elapsedNano / 1_000_000_000.0f;
+        } catch (Exception e) {
+            return 0.0f;
+        }
     }
 
     private String resolveQueryHost() {
