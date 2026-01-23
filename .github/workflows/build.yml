@@ -33,12 +33,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare artifact
-        run: |
-          cp target/gportal-query-${{ env.VERSION }}.jar target/gportal-query-plugin.jar
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: gportal-query-${{env.VERSION}}.jar
-          path: target/gportal-query-plugin.jar
+          path: target/gportal-query-${{ env.VERSION }}.jar
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/gportal-query-${{ env.VERSION }}.jar
+          token: ${{ secrets.GITHUB_TOKEN }}
