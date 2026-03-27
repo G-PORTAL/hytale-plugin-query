@@ -10,7 +10,7 @@ Runs on every pull request targeting `main`. Builds the project with `mvn clean 
 
 ### Build and Package (`build.yml`)
 
-Runs when a tag is pushed. Builds the project using the tag as the version, uploads the JAR as an artifact, and creates a GitHub release with the JAR attached.
+Runs when a tag is pushed. Builds the project using the tag as the version, uploads the JAR as an artifact, and creates a GitHub release with the JAR attached. Before building, syncs the `ServerVersion` in `manifest.json` from the Hytale Server dependency version in `pom.xml`.
 
 Use this for manual releases:
 
@@ -25,7 +25,7 @@ Runs when Dependabot opens a pull request. Automatically approves the PR and ena
 
 ### Auto Release (`auto-release.yml`)
 
-Runs when a Dependabot PR is merged into `main`. Builds the project and creates a GitHub release with the JAR. The version is generated as `YYYY.MM.DD-<short-sha>` (e.g. `2026.03.27-a1b2c3d`).
+Runs when a Dependabot PR is merged into `main`. Builds the project and creates a GitHub release with the JAR. The version is generated as `YYYY.MM.DD-<short-sha>` (e.g. `2026.03.27-a1b2c3d`). Before building, syncs the `ServerVersion` in `manifest.json` from the Hytale Server dependency version in `pom.xml`.
 
 ## Dependabot (`dependabot.yml`)
 

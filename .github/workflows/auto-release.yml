@@ -33,6 +33,14 @@ jobs:
           VERSION="${DATE}-${SHORT_SHA}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      - name: Sync ServerVersion in manifest
+        run: |
+          SERVER_VERSION=$(sed -n '/<artifactId>Server<\/artifactId>/{
+          n
+          s/.*<version>\(.*\)<\/version>.*/\1/p
+          }' pom.xml)
+          sed -i "s/\"ServerVersion\": \".*\"/\"ServerVersion\": \"$SERVER_VERSION\"/" src/main/resources/manifest.json
+
       - name: Build with Maven
         run: mvn clean package -Drevision=${{ env.VERSION }}
         env:
