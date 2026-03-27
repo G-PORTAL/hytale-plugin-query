@@ -17,10 +17,6 @@
             <id>hytale-release</id>
             <url>https://maven.hytale.com/release</url>
         </repository>
-        <repository>
-            <id>hytale-pre-release</id>
-            <url>https://maven.hytale.com/pre-release</url>
-        </repository>
     </repositories>
 
     <properties>
@@ -39,7 +35,7 @@
         <dependency>
             <groupId>com.hypixel.hytale</groupId>
             <artifactId>Server</artifactId>
-            <version>2026.03.26-92489d5e7</version>
+            <version>2026.03.26-89796e57b</version>
         </dependency>
     </dependencies>
 

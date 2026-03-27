@@ -4,9 +4,6 @@ registries:
   hytale-release:
     type: maven-repository
     url: https://maven.hytale.com/release
-  hytale-pre-release:
-    type: maven-repository
-    url: https://maven.hytale.com/pre-release
   gportal-packages:
     type: maven-repository
     url: https://maven.pkg.github.com/g-portal/a2s-java
@@ -18,7 +15,6 @@ updates:
     directory: "/"
     registries:
       - hytale-release
-      - hytale-pre-release
       - gportal-packages
     schedule:
       interval: "daily"
