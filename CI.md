@@ -29,7 +29,7 @@ Runs when a Dependabot PR is merged into `main`. Builds the project and creates 
 
 ## Dependabot (`dependabot.yml`)
 
-Configured to check for Maven dependency updates weekly. All dependencies are grouped into a single PR. Custom registries are configured for `maven.hytale.com` (release and pre-release) and GitHub Packages (`g-portal/a2s-java`) so Dependabot can discover new versions of all dependencies.
+Configured to check for Maven dependency updates daily. All dependencies are grouped into a single PR. Custom registries are configured for `maven.hytale.com` (release only, no pre-releases) and GitHub Packages (`g-portal/a2s-java`) so Dependabot can discover new versions of all dependencies.
 
 ## Automated Dependency Update Flow
 
