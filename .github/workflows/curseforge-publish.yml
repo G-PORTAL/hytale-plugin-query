@@ -1,0 +1,61 @@
+name: CurseForge Publish
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "The version string"
+        type: string
+        required: true
+    secrets:
+      CF_API_TOKEN:
+        description: "CurseForge API token"
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download jar from release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          JAR_NAME="gportal-query-${{ inputs.version }}.jar"
+          gh release download "${{ inputs.version }}" --repo "${{ github.repository }}" --pattern "$JAR_NAME"
+
+      - name: Upload to CurseForge
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          mv "gportal-query-${{ inputs.version }}.jar" "gportal-query.jar"
+          JAR_PATH="gportal-query.jar"
+
+          cat > metadata.json << EOF
+          {
+            "changelog": "Release ${{ inputs.version }}",
+            "changelogType": "markdown",
+            "displayName": "${{ inputs.version }}",
+            "releaseType": "release"
+          }
+          EOF
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://42.curseforge.com/api/projects/1431518/upload-file" \
+            -H "X-Api-Token: $CURSEFORGE_TOKEN" \
+            -F "metadata=<metadata.json" \
+            -F "file=@$JAR_PATH")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response: $BODY"
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+            echo "Successfully published to CurseForge!"
+          else
+            echo "ERROR: Failed to publish to CurseForge (HTTP $HTTP_CODE)"
+            exit 1
+          fi

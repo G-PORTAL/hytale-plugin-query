@@ -27,11 +27,13 @@ jobs:
           server-password: GITHUB_TOKEN
 
       - name: Generate version
+        id: version
         run: |
           DATE=$(date +%Y.%m.%d)
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION="${DATE}-${SHORT_SHA}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Sync ServerVersion in manifest
         run: |
@@ -52,3 +54,14 @@ jobs:
           tag_name: ${{ env.VERSION }}
           files: target/gportal-query-${{ env.VERSION }}.jar
           generate_release_notes: true
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+  curseforge:
+    needs: release
+    uses: ./.github/workflows/curseforge-publish.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+    secrets:
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
