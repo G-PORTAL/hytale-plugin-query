@@ -1,0 +1,28 @@
+version: 2
+
+registries:
+  hytale-release:
+    type: maven-repository
+    url: https://maven.hytale.com/release
+  hytale-pre-release:
+    type: maven-repository
+    url: https://maven.hytale.com/pre-release
+  gportal-packages:
+    type: maven-repository
+    url: https://maven.pkg.github.com/g-portal/a2s-java
+    username: x-access-token
+    password: ${{ secrets.GH_PACKAGES_TOKEN }}
+
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    registries:
+      - hytale-release
+      - hytale-pre-release
+      - gportal-packages
+    schedule:
+      interval: "daily"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
