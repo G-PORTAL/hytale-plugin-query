@@ -17,8 +17,10 @@ updates:
       - hytale-release
       - gportal-packages
     schedule:
+      # Dependabot enforces a minimum interval of 24 hours, so hourly is rejected.
       interval: "cron"
-      cronjob: "0 * * * *"
+      cronjob: "0 18 * * *"
+      timezone: "Etc/UTC"
     # Pick up new upstream releases immediately. Without this, Dependabot applies a
     # default 3-day cooldown, which is why 0.6.0/0.6.1 were skipped in favour of 0.5.9.
     # The *-days keys have a schema minimum of 1, so cooldown is opted out of by
