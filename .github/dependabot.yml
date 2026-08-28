@@ -17,7 +17,15 @@ updates:
       - hytale-release
       - gportal-packages
     schedule:
-      interval: "daily"
+      interval: "cron"
+      cronjob: "0 * * * *"
+    # Pick up new upstream releases immediately. Without this, Dependabot applies a
+    # default 3-day cooldown, which is why 0.6.0/0.6.1 were skipped in favour of 0.5.9.
+    cooldown:
+      default-days: 0
+      semver-major-days: 0
+      semver-minor-days: 0
+      semver-patch-days: 0
     groups:
       all-dependencies:
         patterns:
