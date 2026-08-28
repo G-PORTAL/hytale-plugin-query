@@ -13,28 +13,36 @@ import com.hypixel.hytale.server.core.plugin.PluginBase;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.io.PacketHandler;
-import io.netty.util.AttributeKey;
+import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.registry.Registration;
 
-import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.function.IntSupplier;
 
 public class StatusWriter {
-    private static AttributeKey<Long> LOGIN_START_KEY;
-
-    static {
-        try {
-            Field field = PacketHandler.class.getDeclaredField("LOGIN_START_ATTRIBUTE_KEY");
-            field.setAccessible(true);
-            LOGIN_START_KEY = (AttributeKey<Long>) field.get(null);
-        } catch (Exception e) {
-            System.out.println("[QueryPlugin] Failed to access LOGIN_START_ATTRIBUTE_KEY: " + e.getMessage());
-        }
-    }
+    // Fallback bound for the session map when the configured max player count is unavailable
+    // or unbounded (e.g. getMaxPlayers() returns <= 0).
+    private static final int DEFAULT_PLAYER_CAPACITY = 256;
 
     private QueryServer server;
+
+    // Tracks when each connected player's session started (System.nanoTime()) so we can report
+    // per-player connection time — the Server 0.5.6 API no longer exposes it directly. Bounded
+    // FIFO by the configured max player count: if a PlayerDisconnectEvent is ever missed, the
+    // oldest entry is evicted rather than leaking. Synchronized because connect/disconnect events
+    // fire off the status-update thread.
+    private final Map<UUID, Long> sessionStartNanos = Collections.synchronizedMap(
+            new BoundedSessionMap(StatusWriter::maxTrackedPlayers));
+
+    private Registration connectListener;
+    private Registration disconnectListener;
 
     public void start() {
         var ip = resolveQueryHost();
@@ -43,12 +51,24 @@ public class StatusWriter {
 
         server = new QueryServer(new InetSocketAddress(ip, port), info);
 
+        registerConnectionTracking();
+
         updateStatus();
 
         System.out.println("[QueryPlugin] A2S Server started on " + ip + ":" + port);
     }
 
     public void stop() {
+        if (connectListener != null) {
+            connectListener.unregister();
+            connectListener = null;
+        }
+        if (disconnectListener != null) {
+            disconnectListener.unregister();
+            disconnectListener = null;
+        }
+        sessionStartNanos.clear();
+
         if (server != null) {
             server.shutdown();
         }
@@ -117,18 +137,73 @@ public class StatusWriter {
         universe.getWorlds().forEach((name, world) -> server.rules.put("tps_" + name, String.valueOf(world.getTps())));
     }
 
+    // Subscribe to player connect/disconnect events to track session start times. The Server 0.5.6
+    // API no longer exposes connection time directly (the old PacketHandler.LOGIN_START_ATTRIBUTE_KEY
+    // Netty channel attribute was removed when the transport moved to QUIC).
+    private void registerConnectionTracking() {
+        var eventBus = HytaleServer.get().getEventBus();
+
+        connectListener = eventBus.register(PlayerConnectEvent.class, (PlayerConnectEvent event) -> {
+            PlayerRef ref = event.getPlayerRef();
+            if (ref != null) {
+                // Overwrite any stale entry (e.g. a missed disconnect on a prior session).
+                sessionStartNanos.put(ref.getUuid(), System.nanoTime());
+            }
+        });
+
+        disconnectListener = eventBus.register(PlayerDisconnectEvent.class, (PlayerDisconnectEvent event) -> {
+            PlayerRef ref = event.getPlayerRef();
+            if (ref != null) {
+                sessionStartNanos.remove(ref.getUuid());
+            }
+        });
+    }
+
+    // Seconds the player has been connected. Players already online before this plugin loaded (or
+    // whose start time was evicted under the FIFO bound) are not tracked and report 0.
     private float getPlayerConnectionTime(PlayerRef ref) {
-        if (LOGIN_START_KEY == null || ref == null) return 0.0f;
-
-        try {
-            var channel = ref.getPacketHandler().getChannel();
-            Long startNano = channel.attr(LOGIN_START_KEY).get();
-            if (startNano == null) return 0.0f;
-
-            long elapsedNano = System.nanoTime() - startNano;
-            return (float) elapsedNano / 1_000_000_000.0f;
-        } catch (Exception e) {
+        if (ref == null) {
             return 0.0f;
+        }
+
+        Long startNano = sessionStartNanos.get(ref.getUuid());
+        if (startNano == null) {
+            return 0.0f;
+        }
+
+        long elapsedNano = System.nanoTime() - startNano;
+        return (float) elapsedNano / 1_000_000_000.0f;
+    }
+
+    // Upper bound for the session map, tied to the server's configured max player count so it can
+    // never exceed the number of players that can actually be online. Falls back to a safe default
+    // if the config is not yet available or reports an unbounded (<= 0) value.
+    private static int maxTrackedPlayers() {
+        try {
+            int maxPlayers = HytaleServer.get().getConfig().getMaxPlayers();
+            if (maxPlayers > 0) {
+                return maxPlayers;
+            }
+        } catch (Exception ignored) {
+            // Server/config not ready — fall through to the default.
+        }
+
+        return DEFAULT_PLAYER_CAPACITY;
+    }
+
+    // FIFO-bounded map: evicts the oldest inserted entry once it grows past the capacity supplied
+    // at eviction time. Guards against leaks if a disconnect event is ever missed.
+    @SuppressWarnings("serial")
+    private static final class BoundedSessionMap extends LinkedHashMap<UUID, Long> {
+        private final IntSupplier capacity;
+
+        private BoundedSessionMap(IntSupplier capacity) {
+            this.capacity = capacity;
+        }
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<UUID, Long> eldest) {
+            return size() > capacity.getAsInt();
         }
     }
 
