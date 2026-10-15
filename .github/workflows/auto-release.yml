@@ -41,7 +41,11 @@ jobs:
           n
           s/.*<version>\(.*\)<\/version>.*/\1/p
           }' pom.xml)
-          sed -i "s/\"ServerVersion\": \".*\"/\"ServerVersion\": \"$SERVER_VERSION\"/" src/main/resources/manifest.json
+          test -n "$SERVER_VERSION" || { echo "Server version not found in pom.xml"; exit 1; }
+          # Hytale rejects a bare version unless the patch is 0 -> target the whole minor line (0.7.2 -> ^0.7.0)
+          SERVER_RANGE="^${SERVER_VERSION%.*}.0"
+          sed -i "s/\"ServerVersion\": \".*\"/\"ServerVersion\": \"$SERVER_RANGE\"/" src/main/resources/manifest.json
+          grep '"ServerVersion"' src/main/resources/manifest.json
 
       - name: Build with Maven
         run: mvn clean package -Drevision=${{ env.VERSION }}
